@@ -3,8 +3,18 @@ const MAX_TEXT_CHARS = 2500;
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 export default async function handler(req, res) {
+  if (req.method === "GET") {
+    return res.status(200).json({
+      ok: true,
+      endpoint: "/api/analyze-testimony",
+      openaiKeyConfigured: Boolean(process.env.OPENAI_API_KEY),
+      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      message: "Send a POST request from the app to analyze testimony and screenshots.",
+    });
+  }
+
   if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
+    res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -95,6 +105,8 @@ Vent text:
       return res.status(response.status).json({
         error: "OpenAI analysis failed",
         detail: data.error?.message || "Unknown API error",
+        type: data.error?.type,
+        code: data.error?.code,
       });
     }
 

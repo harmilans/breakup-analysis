@@ -658,10 +658,11 @@
         try {
           state.ventResult = await analyzeTestimony(state.vent.trim(), state.evidence);
         } catch (error) {
+          const detail = error instanceof Error && error.message ? error.message : "Unknown backend error";
           state.ventResult = {
             delta: 0,
-            note: "The online analysis backend did not respond, so I could not read the screenshots yet. Check that the Vercel deployment includes the /api folder and that OPENAI_API_KEY is set, then try again.",
-            findings: ["Analysis backend failed. Check Vercel environment variables and redeploy."]
+            note: `The online analysis backend responded, but analysis failed: ${detail}. Check Vercel Function logs for the same error, then try again.`,
+            findings: [`Backend error: ${detail}`]
           };
         }
         state.screen = "results";
