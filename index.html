@@ -414,31 +414,22 @@
       return { delta, note, findings: [] };
     }
     async function analyzeTestimony(text, images) {
-      if (location.protocol !== "file:") {
-        try {
-          const response = await fetch("/api/analyze-testimony", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text,
-              images: images.slice(0, 3).map(({ data, media_type }) => ({ data, media_type }))
-            })
-          });
-          if (response.ok) {
-            const parsed = await response.json();
-            return normalizeAnalysis(parsed, text, images);
-          }
-        } catch (_) {
-          // Fall through to the local text-only analysis for offline/static previews.
-        }
+      const response = await fetch("/api/analyze-testimony", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          images: images.slice(0, 3).map(({ data, media_type }) => ({ data, media_type }))
+        })
+      });
+
+      if (response.ok) {
+        const parsed = await response.json();
+        return normalizeAnalysis(parsed, text, images);
       }
 
-      const result = keywordAnalysis(text || "");
-      if (images.length) {
-        result.note += " I can see you attached screenshot evidence; once this is live, Dr. Whiskers will read those receipts too. For this preview, I used your written testimony only.";
-        result.findings = [];
-      }
-      return result;
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || error.error || "Analysis API failed");
     }
 
     function normalizeAnalysis(parsed, text, images) {
@@ -509,6 +500,20 @@
 
     function render() {
       const app = document.getElementById("app");
+      if (location.protocol === "file:") {
+        app.innerHTML = `<section class="card stack" style="text-align:center">
+          ${catSvg("judging", 92)}
+          <div>
+            <h2 style="font:700 24px/1.2 Fraunces,serif;margin:0 0 10px">Open the Vercel link</h2>
+            <p class="soft" style="font-size:15px;line-height:1.55;margin:0">This app only works online because screenshot analysis needs the secure backend API. The local file preview is disabled.</p>
+          </div>
+          <div class="details">
+            <div><strong>Use:</strong> https://your-project.vercel.app</div>
+            <div><strong>Not:</strong> file:///C:/.../index.html</div>
+          </div>
+        </section>`;
+        return;
+      }
       const score = state.answers.reduce((s, a) => s + a.pts, 0);
       const health = state.answers.length ? score / (state.answers.length * 5) : 1;
       const catMood = health > .7 ? "happy" : health > .4 ? "neutral" : "judging";
@@ -650,7 +655,15 @@
       state.musicOn = true;
       render();
       setTimeout(async () => {
-        state.ventResult = await analyzeTestimony(state.vent.trim(), state.evidence);
+        try {
+          state.ventResult = await analyzeTestimony(state.vent.trim(), state.evidence);
+        } catch (error) {
+          state.ventResult = {
+            delta: 0,
+            note: "The online analysis backend did not respond, so I could not read the screenshots yet. Check that the Vercel deployment includes the /api folder and that OPENAI_API_KEY is set, then try again.",
+            findings: ["Analysis backend failed. Check Vercel environment variables and redeploy."]
+          };
+        }
         state.screen = "results";
         render();
       }, 650);
