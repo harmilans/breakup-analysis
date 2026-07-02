@@ -435,8 +435,8 @@
 
       const result = keywordAnalysis(text || "");
       if (images.length) {
-        result.note += " Screenshot analysis will run when this is deployed with the secure /api/analyze-testimony endpoint.";
-        result.findings = ["Screenshot evidence attached.", "Online vision endpoint not available in this local file preview.", "Written testimony carried this fallback score."];
+        result.note += " I can see you attached screenshot evidence; once this is live, Dr. Whiskers will read those receipts too. For this preview, I used your written testimony only.";
+        result.findings = [];
       }
       return result;
     }
