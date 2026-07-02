@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Talking Stage Autopsy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #fbf7ff;
+      --lilac: #efe4ff;
+      --ink: #2b1b3d;
+      --ink-soft: #6b5a82;
+      --pink: #e84393;
+      --orchid: #b33bc9;
+      --mint: #3fbf9a;
+      --butter: #ffd66b;
+      --red: #ff3b5c;
+      --line: #e3d5f5;
+      --fur: #b08be0;
+      --fur-dark: #8a63c4;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Space Grotesk", system-ui, sans-serif;
+      background: linear-gradient(180deg, var(--paper), var(--lilac));
+    }
+
+    button, input, textarea { font: inherit; }
+    button, label.file-picker { cursor: pointer; }
+    button:disabled { cursor: not-allowed; }
+    .page {
+      width: min(calc(100% - 32px), 480px);
+      margin: 0 auto;
+      padding: 24px 0 32px;
+    }
+    .stack { display: flex; flex-direction: column; gap: 16px; }
+    header { text-align: center; padding-top: 8px; }
+    .eyebrow {
+      color: var(--ink-soft);
+      font-size: 12px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 6px 0 0;
+      font: 700 32px/1.08 "Fraunces", serif;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+    h1 em { color: var(--pink); }
+    .card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(43, 27, 61, .08);
+      padding: 20px;
+    }
+    .mini-card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(43, 27, 61, .08);
+      padding: 10px 16px;
+    }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .between { justify-content: space-between; }
+    .speech { display: flex; align-items: flex-end; gap: 10px; }
+    .speech > div:first-child { flex: 0 0 auto; }
+    .speech-bubble {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      border: 1.5px solid var(--line);
+      border-radius: 16px 16px 16px 4px;
+      background: #fff;
+      padding: 12px 16px;
+    }
+    .speech p { margin: 0; font-size: 14.5px; line-height: 1.55; }
+    .speech p + p { margin-top: 8px; }
+    .soft { color: var(--ink-soft); }
+    .label {
+      display: block;
+      color: var(--ink-soft);
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    input, textarea {
+      width: 100%;
+      border: 1.5px solid var(--line);
+      border-radius: 12px;
+      background: var(--paper);
+      color: var(--ink);
+      padding: 12px 14px;
+      outline: none;
+    }
+    textarea { resize: vertical; line-height: 1.5; }
+    input:focus-visible, textarea:focus-visible, button:focus-visible {
+      outline: 3px solid var(--orchid);
+      outline-offset: 2px;
+    }
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(90deg, var(--pink), var(--orchid));
+      transition: transform .16s ease, opacity .16s ease;
+      text-decoration: none;
+      text-align: center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(.985); }
+    .btn.secondary {
+      background: #fff;
+      color: var(--ink);
+      border: 1.5px solid var(--line);
+    }
+    .btn.warning { background: linear-gradient(90deg, #ff7a3d, var(--red)); }
+    .btn.yellow {
+      background: var(--butter);
+      color: var(--ink);
+      border: 2px solid var(--ink);
+    }
+    .quiz-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .progress, .bar {
+      width: 100%;
+      height: 7px;
+      background: var(--lilac);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress span, .bar span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--pink), var(--orchid));
+      transition: width .25s ease;
+    }
+    .option {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      border: 1.5px solid var(--line);
+      border-radius: 12px;
+      background: var(--paper);
+      color: var(--ink);
+      padding: 15px;
+      font-weight: 500;
+    }
+    .option.selected { border-color: var(--orchid); background: var(--lilac); }
+    .option.dimmed { opacity: .45; }
+    .evidence-box {
+      border: 1.5px dashed var(--line);
+      border-radius: 12px;
+      background: var(--paper);
+      padding: 14px;
+    }
+    .thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .thumb {
+      position: relative;
+      width: 64px;
+      height: 64px;
+    }
+    .thumb img {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1.5px solid var(--line);
+    }
+    .thumb button {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 22px;
+      height: 22px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--red);
+      color: #fff;
+      font-weight: 700;
+    }
+    .file-picker {
+      display: block;
+      margin-top: 10px;
+      border: 1.5px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--orchid);
+      padding: 10px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .file-picker input { display: none; }
+    .certificate {
+      text-align: center;
+      border-color: var(--ink);
+      border-width: 2px;
+    }
+    .tiny-title {
+      color: var(--ink-soft);
+      font-size: 10px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+    .subject {
+      font: italic 500 22px "Fraunces", serif;
+    }
+    .probability {
+      font: 700 64px/1 "Fraunces", serif;
+      margin-top: 4px;
+    }
+    .details {
+      text-align: left;
+      border: 1.5px dashed var(--line);
+      border-radius: 12px;
+      background: var(--paper);
+      padding: 12px 14px;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .report-row + .report-row { margin-top: 14px; }
+    .report-label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
+    .healing {
+      border: 1.5px solid #cfeee2;
+      border-radius: 12px;
+      background: #f2fbf7;
+      padding: 12px 14px;
+      line-height: 1.55;
+    }
+    .footer-note {
+      color: var(--ink-soft);
+      text-align: center;
+      font-size: 12px;
+      margin: 0;
+    }
+    .thinking { animation: pulse 1.2s ease-in-out infinite; }
+    .paw-in { animation: pawIn .3s ease-out; }
+    .burning { animation: burnAway 2.4s ease-in forwards; }
+    .flames {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-end;
+    }
+    .flame { animation: flameRise 1.3s ease-out infinite; font-size: 22px; }
+    @keyframes pawIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    @keyframes burnAway {
+      0% { opacity: 1; filter: none; }
+      60% { opacity: .7; filter: blur(1px) brightness(1.2); }
+      100% { opacity: 0; transform: translateY(-14px) scale(.96); filter: blur(4px); }
+    }
+    @keyframes flameRise {
+      0% { opacity: 0; transform: translateY(14px) scale(.6); }
+      25% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-46px) scale(1.25) rotate(8deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, svg animate { animation: none !important; transition: none !important; }
+    }
+    @media (max-width: 460px) {
+      .page { width: calc(100% - 32px); }
+      h1 { font-size: 28px; }
+      .eyebrow { font-size: 10px; }
+      .card { padding: 18px; }
+      .speech { gap: 8px; }
+      .speech svg { width: 58px; height: 58px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page stack">
+    <header>
+      <div class="eyebrow">🐾 Dr. Whiskers' Heartbreak Forensics Lab 🐾</div>
+      <h1><span>The Talking Stage</span><br><em>Autopsy</em> 🪦</h1>
+    </header>
+    <section id="app" class="stack"></section>
+  </main>
+
+  <script>
+    const INSTAGRAM_LINK = "https://www.instagram.com/hmsingh1310?igsh=OWNkaHplODBtbnI%3D&utm_source=qr";
+    const T = {
+      paper: "#FBF7FF", lilac: "#EFE4FF", ink: "#2B1B3D", inkSoft: "#6B5A82",
+      pink: "#E84393", orchid: "#B33BC9", mint: "#3FBF9A", butter: "#FFD66B",
+      red: "#FF3B5C", line: "#E3D5F5", fur: "#B08BE0", furDark: "#8A63C4"
+    };
+    const CATS = {
+      effort: { label: "Effort & Reciprocity", framework: "Gottman's bids for connection" },
+      comm: { label: "Communication", framework: "Gottman's Four Horsemen" },
+      attach: { label: "Emotional Consistency", framework: "Attachment theory" },
+      invest: { label: "Investment & Intimacy", framework: "Rusbult's investment model" }
+    };
+    const QUESTIONS = [
+      { cat: "effort", vibe: "science", q: "Who usually texted first?", a: { t: "Honestly, pretty 50/50", pts: 5 }, b: { t: "Me. Basically always me", pts: 0 } },
+      { cat: "effort", vibe: "fun", q: "Their texting vocabulary was...", a: { t: "Full sentences. Thoughts. Questions", pts: 5 }, b: { t: "\"lol\" \"hmm\" \"wbu\" - a person of three words", pts: 1 } },
+      { cat: "effort", vibe: "science", q: "You shared good news. They...", a: { t: "Said \"nice\" and changed the subject", pts: 0 }, b: { t: "Matched your energy, asked questions", pts: 5 } },
+      { cat: "effort", vibe: "fun", q: "Friday night plans with them...", a: { t: "You. Confirmed. In advance", pts: 5 }, b: { t: "\"might have a thing, will lmk\" (never lmk'd)", pts: 0 } },
+      { cat: "effort", vibe: "fun", q: "The story-watch situation...", a: { t: "Watched your story, ignored your text 🔎", pts: 0 }, b: { t: "Replied to both like a functioning adult", pts: 5 } },
+      { cat: "comm", vibe: "science", q: "When something bothered you...", a: { t: "You could actually talk it out", pts: 5 }, b: { t: "They got defensive or vanished", pts: 0 } },
+      { cat: "comm", vibe: "fun", q: "Their signature emoji was...", a: { t: "The dry 👍", pts: 1 }, b: { t: "Actual warmth. Matched your energy", pts: 5 } },
+      { cat: "comm", vibe: "science", q: "Hard conversations...", a: { t: "They leaned in and engaged", pts: 5 }, b: { t: "Left on read. Sometimes for days", pts: 0 } },
+      { cat: "comm", vibe: "fun", q: "Their apologies sounded like...", a: { t: "\"Sorry you feel that way\" / blamed Mercury retrograde", pts: 1 }, b: { t: "A real, specific \"I'm sorry\"", pts: 5 } },
+      { cat: "comm", vibe: "science", q: "After a weird moment or mini-fight...", a: { t: "You repaired it together", pts: 5 }, b: { t: "They pretended nothing happened", pts: 1 } },
+      { cat: "attach", vibe: "science", q: "Their affection was...", a: { t: "Hot and cold. Emotional whiplash", pts: 0 }, b: { t: "Steady. You knew where you stood", pts: 5 } },
+      { cat: "attach", vibe: "fun", q: "The 1am \"wyd\" text was...", a: { t: "Their entire personality", pts: 0 }, b: { t: "Never happened - they texted at human hours", pts: 5 } },
+      { cat: "attach", vibe: "science", q: "The \"where is this going?\" question...", a: { t: "They were open to it", pts: 5 }, b: { t: "They were allergic to it", pts: 0 } },
+      { cat: "attach", vibe: "fun", q: "The pet test. Your cat/dog...", a: { t: "KNEW. Hissed on sight. Animals sense evil", pts: 0 }, b: { t: "Approved of them (a rare honor)", pts: 5 } },
+      { cat: "attach", vibe: "science", q: "Around them, you mostly felt...", a: { t: "Calm and at ease", pts: 5 }, b: { t: "Anxious, checking your phone", pts: 0 } },
+      { cat: "invest", vibe: "science", q: "Meeting their friends...", a: { t: "Happened, or was clearly coming", pts: 5 }, b: { t: "You were basically a secret", pts: 0 } },
+      { cat: "invest", vibe: "fun", q: "Emotional depth of your chats...", a: { t: "Only their gym split had feelings", pts: 1 }, b: { t: "Real talks. Real vulnerability", pts: 5 } },
+      { cat: "invest", vibe: "science", q: "Future tense with them...", a: { t: "Plans weeks ahead, casually", pts: 5 }, b: { t: "Never past \"this weekend\"", pts: 0 } },
+      { cat: "invest", vibe: "fun", q: "Their phone when you hung out...", a: { t: "Glued to it, smirking at \"nothing\"", pts: 0 }, b: { t: "Face down. Actually present", pts: 5 } },
+      { cat: "invest", vibe: "science", q: "When you were sick or down...", a: { t: "They showed up", pts: 5 }, b: { t: "One \"feel better\" text, then gone", pts: 0 } }
+    ];
+    const MAX = QUESTIONS.length * 5;
+    const BAD = ["Hisss. Noted for the report. 🙀", "The lab has seen laser pointers with more commitment.", "I've knocked better options off a table.", "That's a red flag, and I'm colorblind.", "Even I bury things with more respect."];
+    const GOOD = ["Purr. Acceptable behavior. 😺", "Hm. A rare green flag. Logged.", "Okay, one point to the deceased.", "Slow blink of approval."];
+    const CAUSES = {
+      effort: "Chronic Effort Deficiency - one person doing cardio for two hearts",
+      comm: "Acute Stonewalling - conversations kept leaving on read",
+      attach: "Hot-and-Cold Syndrome - emotional whiplash, terminal",
+      invest: "Failure to Commit - never survived past \"this weekend\""
+    };
+    const RED_WORDS = ["ghost", "ignored", "ignore", "dry", "breadcrumb", "mixed signal", "excuse", "cold", "confus", "anxious", "left on read", "flaky", "cancel", "lied", "lying", "hot and cold", "never texted", "one sided", "one-sided", "avoid", "distant", "secret", "player", "situationship", "led me on", "used me", "disappear"];
+    const GREEN_WORDS = ["sweet", "effort", "consistent", "listened", "cared", "caring", "laugh", "planned", "showed up", "kind", "honest", "deep talk", "remembered", "supportive", "safe", "comfortable", "genuine", "thoughtful"];
+
+    const state = {
+      screen: "intro", name: "", idx: 0, answers: [], picked: null, remark: null,
+      vent: "", ventResult: null, evidence: [], burnText: "", burnState: "idle",
+      musicOn: true, music: { started: false, stopped: false, ctx: null, master: null, timer: null }
+    };
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch]));
+    }
+    function catSvg(mood = "neutral", size = 84) {
+      let eyes = "";
+      if (mood === "happy") eyes = `<path d="M34 46 q5 -6 10 0" stroke="${T.ink}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M62 46 q5 -6 10 0" stroke="${T.ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+      else if (mood === "judging") eyes = `<rect x="33" y="44" width="12" height="4" rx="2" fill="${T.ink}"/><rect x="61" y="44" width="12" height="4" rx="2" fill="${T.ink}"/>`;
+      else if (mood === "grave") eyes = `<path d="M33 42 l12 6 M45 42 l-12 6" stroke="${T.ink}" stroke-width="2.5" stroke-linecap="round"/><path d="M61 42 l12 6 M73 42 l-12 6" stroke="${T.ink}" stroke-width="2.5" stroke-linecap="round"/>`;
+      else eyes = `<circle cx="39" cy="46" r="4.5" fill="${T.ink}"/><circle cx="67" cy="46" r="4.5" fill="${T.ink}"/><circle cx="40.5" cy="44.5" r="1.5" fill="#fff"/><circle cx="68.5" cy="44.5" r="1.5" fill="#fff"/>`;
+      return `<svg width="${size}" height="${size}" viewBox="0 0 106 106" aria-label="Dr. Whiskers the forensic cat">
+        <path d="M22 34 L16 8 L42 20 Z" fill="${T.fur}" stroke="${T.furDark}" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M84 34 L90 8 L64 20 Z" fill="${T.fur}" stroke="${T.furDark}" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M24 28 L21 15 L35 21 Z" fill="${T.pink}" opacity=".7"/><path d="M82 28 L85 15 L71 21 Z" fill="${T.pink}" opacity=".7"/>
+        <ellipse cx="53" cy="56" rx="38" ry="34" fill="${T.fur}" stroke="${T.furDark}" stroke-width="2.5"/>${eyes}
+        <path d="M50 58 L56 58 L53 62 Z" fill="${T.pink}"/>
+        <path d="M53 62 q0 5 -6 6 M53 62 q0 5 6 6" stroke="${T.ink}" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M16 54 h16 M16 62 h16 M74 54 h16 M74 62 h16" stroke="${T.furDark}" stroke-width="2" stroke-linecap="round"/>
+        <path d="M38 86 q15 10 30 0" stroke="${T.ink}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="68" cy="88" r="5" fill="${T.butter}" stroke="${T.ink}" stroke-width="2.5"/>
+      </svg>`;
+    }
+    function speech(mood, inner, small = false) {
+      return `<div class="speech"><div>${catSvg(mood, small ? 64 : 84)}</div><div class="speech-bubble">${inner}</div></div>`;
+    }
+    function ekg(health) {
+      const amp = 4 + health * 16;
+      const beat = `M0,20 L14,20 L18,${20 - amp * .35} L22,${20 + amp * .3} L26,20 L30,${20 - amp} L34,${20 + amp * .8} L38,20 L52,20`;
+      return `<svg viewBox="0 0 52 40" style="width:100%;height:40px" preserveAspectRatio="none" aria-hidden="true"><path d="${beat}" fill="none" stroke="${health < .25 ? T.red : T.pink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="opacity" values="1;.55;1" dur="1.4s" repeatCount="indefinite"/></path></svg>`;
+    }
+    function verdictFor(pct) {
+      if (pct < 20) return { title: "Time of death: before it even started.", savage: "This wasn't a talking stage, it was a hostage situation with good lighting. My professional feline opinion: you were performing CPR on a Wi-Fi signal.", gentle: "Here's the real finding: your effort was never the problem. You showed up for something that never showed up for you, and that says everything good about you." };
+      if (pct < 45) return { title: "It was on life support, and you were the machine.", savage: "There were faint vitals, but let's be honest: you were doing cardio for two hearts. The moment you stopped compressions, it flatlined. Suspicious. I've opened an investigation.", gentle: "You gave this a genuinely fair shot. Consistency can't be a solo sport, and you deserve someone who makes matching your energy look easy." };
+      if (pct < 70) return { title: "There was a pulse. A pulse isn't a heartbeat.", savage: "Decent vitals, tragic follow-through. This one died of Potential, the leading cause of death in talking stages worldwide. The lab sends its regards.", gentle: "It's okay that this one stings a bit; there was something real there. But almost right isn't right, and you just freed up space for someone who doesn't need an autopsy." };
+      return { title: "Okay... this one had real vitals.", savage: "The lab is confused. By these numbers, the patient should be alive. Cause of death: external factors, timing, or a fatal case of them not knowing what they had.", gentle: "This one was real, so grieve it properly. The data proves you're capable of building something healthy. That skill leaves with you." };
+    }
+    function keywordAnalysis(text) {
+      const t = text.toLowerCase();
+      let delta = 0;
+      RED_WORDS.forEach((w) => { if (t.includes(w)) delta -= 2; });
+      GREEN_WORDS.forEach((w) => { if (t.includes(w)) delta += 2; });
+      delta = Math.max(-10, Math.min(10, delta));
+      const note = delta < -3
+        ? "I read every word. Your own testimony confirms it: the red flags were waving before you even got attached. Case closed, whiskers down. You were not too much; they were doing too little."
+        : delta > 3
+          ? "Your vent shows there were real, warm moments in there, which makes the ending unfair, not your fault. Grieve the good parts; they were real, and so was your capacity to care."
+          : "I read your testimony carefully. Mixed evidence: some warmth, some warning signs. Which is exactly why your gut got confused. It wasn't you.";
+      return { delta, note, findings: [] };
+    }
+    function analyzeTestimony(text, images) {
+      const result = keywordAnalysis(text || "");
+      if (images.length) {
+        result.note += " I could preview the screenshot evidence locally, but without a private analysis API connected, I only used your written testimony for scoring.";
+        result.findings = ["Screenshot evidence was attached for the report.", "Private browser build avoided uploading chat images.", "Written testimony carried the final adjustment."];
+      }
+      return result;
+    }
+    function computeResults() {
+      if (state.answers.length < QUESTIONS.length) return null;
+      const score = state.answers.reduce((s, a) => s + a.pts, 0);
+      const base = Math.round((score / MAX) * 100);
+      const delta = state.ventResult ? state.ventResult.delta : 0;
+      const pct = Math.max(3, Math.min(96, base + delta));
+      const byCat = {};
+      Object.keys(CATS).forEach((cat) => {
+        const rel = state.answers.filter((a) => a.cat === cat);
+        byCat[cat] = Math.round((rel.reduce((s, a) => s + a.pts, 0) / (rel.length * 5)) * 100);
+      });
+      const worst = Object.keys(byCat).sort((a, b) => byCat[a] - byCat[b])[0];
+      return { pct, delta, byCat, worst, verdict: verdictFor(pct) };
+    }
+    function startMusic() {
+      try {
+        const m = state.music;
+        if (m.started) { if (m.ctx && m.ctx.state === "suspended") m.ctx.resume(); return; }
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        const master = ctx.createGain();
+        master.gain.value = .5;
+        master.connect(ctx.destination);
+        state.music = { started: true, stopped: false, ctx, master, timer: null };
+        scheduleLoop(ctx.currentTime + .1);
+      } catch (_) {}
+    }
+    function playTone(ctx, dest, freq, when, dur, type, vol) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(.0001, when);
+      g.gain.linearRampToValueAtTime(vol, when + .04);
+      g.gain.setValueAtTime(vol, when + dur * .6);
+      g.gain.exponentialRampToValueAtTime(.0001, when + dur);
+      osc.connect(g).connect(dest);
+      osc.start(when);
+      osc.stop(when + dur + .05);
+    }
+    function scheduleLoop(startAt) {
+      const m = state.music;
+      if (!m.ctx || m.stopped) return;
+      const NOTE = { G3: 196, A3: 220, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F3: 174.61, G4: 392, A4: 440, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25 };
+      const Q = 60 / 82, BAR = Q * 4, LOOP = BAR * 4;
+      [["A3", "C4", "E4"], ["F3", "A3", "C4"], ["C4", "E4", "G4"], ["G3", "B3", "D4"]].forEach((chord, bar) => chord.forEach((n) => playTone(m.ctx, m.master, NOTE[n], startAt + bar * BAR, BAR * .95, "sine", .05)));
+      ["E5", "C5", "D5", "E5", null, "C5", "A4", null, "G4", "A4", "C5", "B4", null, "A4", null, null].forEach((n, i) => { if (n) playTone(m.ctx, m.master, NOTE[n], startAt + i * Q, Q * .9, "triangle", .09); });
+      m.timer = setTimeout(() => scheduleLoop(startAt + LOOP), Math.max(200, (startAt + LOOP - m.ctx.currentTime - .3) * 1000));
+    }
+    function stopMusic() {
+      const m = state.music;
+      try { m.stopped = true; if (m.timer) clearTimeout(m.timer); if (m.ctx) m.ctx.close(); } catch (_) {}
+      state.music = { started: false, stopped: false, ctx: null, master: null, timer: null };
+    }
+
+    function render() {
+      const app = document.getElementById("app");
+      const score = state.answers.reduce((s, a) => s + a.pts, 0);
+      const health = state.answers.length ? score / (state.answers.length * 5) : 1;
+      const catMood = health > .7 ? "happy" : health > .4 ? "neutral" : "judging";
+      const subject = state.name.trim() || "The Situationship";
+      const deathDate = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+      const results = computeResults();
+
+      if (state.screen === "intro") {
+        app.innerHTML = `<section class="card stack">
+          ${speech("neutral", `<p><strong>Meow. I'm Dr. Whiskers, Chief Forensic Cat.</strong> I'll ask you 20 this-or-that questions, scored with real relationship science: Gottman's bids and Four Horsemen, attachment theory, and the investment model. At the end: the official probability this thing ever would have survived.</p><p class="soft">Spoiler from the lab: it's usually not you. 😼</p>`)}
+          <label><span class="label">Name of the deceased (optional)</span><input id="name" value="${escapeHtml(state.name)}" placeholder="e.g. Gym Bro Jake 🪦"></label>
+          <button class="btn" id="begin">Begin the autopsy 🔬🐾</button>
+        </section>`;
+        document.getElementById("name").addEventListener("input", (e) => state.name = e.target.value);
+        document.getElementById("begin").onclick = () => { state.screen = "quiz"; render(); };
+        return;
+      }
+
+      if (state.screen === "quiz") {
+        const q = QUESTIONS[state.idx];
+        const badge = q.vibe === "science"
+          ? `<span class="pill" style="background:#eaf4ff;color:#2b6cb0">🧪 certified science</span>`
+          : `<span class="pill" style="background:#fff3e6;color:#c05621">😹 certified vibes</span>`;
+        app.innerHTML = `<section class="stack">
+          <div class="mini-card row"><div style="flex:1">${ekg(health)}</div><div style="text-align:right"><div class="tiny-title">Vitals</div><strong style="color:${health < .4 ? T.red : T.mint}">${Math.round(health * 100)}%</strong></div></div>
+          <div class="card stack">
+            <div class="quiz-meta"><span>${CATS[q.cat].label}</span><span class="row" style="gap:8px">${badge}<span>${state.idx + 1} / ${QUESTIONS.length}</span></span></div>
+            <div class="progress"><span style="width:${(state.idx / QUESTIONS.length) * 100}%"></span></div>
+            ${speech(state.remark ? (state.picked && q[state.picked].pts >= 4 ? "happy" : "judging") : catMood, state.remark ? `<p class="paw-in" style="font-style:italic">${escapeHtml(state.remark)}</p>` : `<h2 style="font:600 19px/1.3 Fraunces,serif;margin:0">${escapeHtml(q.q)}</h2>`, true)}
+            <div class="stack" style="gap:12px">
+              ${["a", "b"].map((opt) => `<button class="option ${state.picked === opt ? "selected" : ""} ${state.picked && state.picked !== opt ? "dimmed" : ""}" data-pick="${opt}" ${state.picked ? "disabled" : ""}><span>🐾</span><span>${escapeHtml(q[opt].t)}</span></button>`).join("")}
+            </div>
+          </div>
+        </section>`;
+        document.querySelectorAll("[data-pick]").forEach((button) => button.onclick = () => pick(button.dataset.pick));
+        return;
+      }
+
+      if (state.screen === "vent") {
+        app.innerHTML = `<section class="card stack">
+          ${speech("neutral", `<p><strong>One last thing before I sign the certificate.</strong> Vent to me. Everything: what went right, what went wrong, what you never got to say. I'll read every word, weigh it into the final probability, and add my doctor's note to the report.</p><p class="soft">Totally optional. Nothing leaves this room. Cat-patient confidentiality. 🤐</p>`)}
+          <textarea id="vent" rows="6" placeholder="Let it out... the good, the bad, the 'wyd' texts at 1am...">${escapeHtml(state.vent)}</textarea>
+          <div class="evidence-box">
+            <div class="tiny-title">🔍 Optional: submit chat evidence</div>
+            <p class="soft" style="font-size:13px;line-height:1.45;margin:8px 0 0">Upload up to 3 screenshots of your chats. This standalone build previews them privately and keeps scoring local.</p>
+            <div class="thumbs">${state.evidence.map((ev, i) => `<div class="thumb"><img src="${ev.preview}" alt="evidence ${i + 1}"><button data-remove="${i}" aria-label="Remove screenshot">×</button></div>`).join("")}</div>
+            ${state.evidence.length < 3 ? `<label class="file-picker">📸 Add screenshot${state.evidence.length ? ` (${state.evidence.length}/3)` : "s"}<input id="evidence" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple></label>` : ""}
+          </div>
+          <button class="btn" id="submit">${state.vent.trim() || state.evidence.length ? "Submit testimony to the lab 📋" : "Skip straight to the report 🪦"}</button>
+          ${state.vent.trim() || state.evidence.length ? `<button class="btn secondary" id="skip">Actually, skip the vent</button>` : ""}
+        </section>`;
+        document.getElementById("vent").addEventListener("input", (e) => state.vent = e.target.value);
+        document.querySelectorAll("[data-remove]").forEach((b) => b.onclick = () => { state.evidence.splice(Number(b.dataset.remove), 1); render(); });
+        const file = document.getElementById("evidence");
+        if (file) file.onchange = (e) => addEvidence(e.target.files);
+        document.getElementById("submit").onclick = submitVent;
+        const skip = document.getElementById("skip");
+        if (skip) skip.onclick = goToResults;
+        return;
+      }
+
+      if (state.screen === "analyzing") {
+        app.innerHTML = `<section class="card stack" style="align-items:center;text-align:center;padding:32px">
+          ${catSvg("judging", 100)}
+          <p class="thinking" style="font:600 19px Fraunces,serif;margin:0">${state.evidence.length ? "Dr. Whiskers is examining the evidence..." : "Dr. Whiskers is reading your testimony..."}</p>
+          <p class="soft" style="margin:0;font-size:13.5px">${state.evidence.length ? "Dusting the screenshots for red flags. 🔍🐾" : "Adjusting the probability. Sharpening the claws. 🐾"}</p>
+        </section>`;
+        return;
+      }
+
+      if (state.screen === "results" && results) {
+        const pctColor = results.pct < 45 ? T.red : results.pct < 70 ? T.orchid : T.mint;
+        app.innerHTML = `<section class="stack">
+          <div class="row" style="justify-content:flex-end"><button class="btn secondary" id="music" style="width:54px;padding:14px" title="${state.musicOn ? "Mute soundtrack" : "Play soundtrack"}">${state.musicOn ? "🎵" : "🔈"}</button></div>
+          <div class="card certificate stack">
+            <div class="tiny-title">Official Certificate of Situationship Death</div>
+            <div class="subject">${escapeHtml(subject)} 🪦</div>
+            ${ekg(results.pct / 100)}
+            <div><div class="tiny-title">Survival probability</div><div class="probability" style="color:${pctColor}">${results.pct}%</div>${state.ventResult && results.delta ? `<div class="soft" style="font-size:12px">(${results.delta > 0 ? "+" : ""}${results.delta}% after your testimony was reviewed)</div>` : ""}</div>
+            <div class="details"><div><strong>Time of death:</strong> ${deathDate}</div><div><strong>Cause of death:</strong> ${escapeHtml(CAUSES[results.worst])}</div><div><strong>Certified by:</strong> Dr. Whiskers, DVM (Doctor of Vibes & Meows) 🐾</div></div>
+            <button class="btn yellow" id="download">📸 Save certificate for the group chat</button>
+          </div>
+          ${state.ventResult && state.ventResult.findings.length ? `<div class="card stack"><div class="tiny-title">🔍 Texting forensics · from your evidence</div>${state.ventResult.findings.map((f, i) => `<div class="details" style="background:var(--paper)"><em>${["🚩", "🔎", "📉"][i] || "🔎"} ${escapeHtml(f)}</em></div>`).join("")}</div>` : ""}
+          ${state.ventResult ? `<div class="card">${speech("neutral", `<p style="font-style:italic">${escapeHtml(state.ventResult.note)}</p>`, true)}</div>` : ""}
+          <div class="card stack">
+            ${speech(results.pct < 45 ? "grave" : results.pct < 70 ? "judging" : "happy", `<h2 style="font:700 19px/1.3 Fraunces,serif;margin:0">${escapeHtml(results.verdict.title)}</h2><p style="margin-top:8px">${escapeHtml(results.verdict.savage)}</p>`)}
+            <p class="healing">🫶 ${escapeHtml(results.verdict.gentle)}</p>
+          </div>
+          <div class="card stack"><div class="tiny-title">Lab report · by framework</div>${Object.keys(CATS).map((cat) => `<div class="report-row"><div class="report-label"><strong>${CATS[cat].label}</strong><span class="soft">${results.byCat[cat]}%</span></div><div class="bar"><span style="width:${results.byCat[cat]}%;background:${results.byCat[cat] < 40 ? T.red : results.byCat[cat] < 70 ? T.butter : T.mint}"></span></div><div class="soft" style="font-size:12px;margin-top:4px">${CATS[cat].framework}</div></div>`).join("")}</div>
+          <div class="card stack" style="background:linear-gradient(135deg,#fff6fb,var(--paper))">${speech("happy", `<p>My prescription: one long rant, administered verbally. For better advice, I can refer you to a better relationship doctor. He has thumbs, and he already knows the whole story. 😽</p>`, true)}<a class="btn" target="_blank" rel="noopener noreferrer" href="${INSTAGRAM_LINK}">Message the human doctor 💌</a></div>
+          <div class="card stack" style="${state.burnState === "done" ? "background:linear-gradient(135deg,#fff9ec,#fbf7ff)" : ""}">${renderBurn()}</div>
+          <button class="btn secondary" id="restart">Autopsy the next one ⚰️🐾</button>
+          <p class="footer-note">For entertainment and healing purposes. Dr. Whiskers is not a licensed physician. He is a cat. 💜</p>
+        </section>`;
+        document.getElementById("music").onclick = toggleMusic;
+        document.getElementById("download").onclick = () => downloadCertificate(results, subject, deathDate);
+        document.getElementById("restart").onclick = restart;
+        const burnInput = document.getElementById("burnText");
+        if (burnInput) burnInput.oninput = (e) => state.burnText = e.target.value;
+        const burnBtn = document.getElementById("burn");
+        if (burnBtn) burnBtn.onclick = burnIt;
+      }
+    }
+    function renderBurn() {
+      if (state.burnState === "done") return `<div style="text-align:center" class="stack paw-in">${catSvg("happy", 90)}<p style="font:700 19px Fraunces,serif;margin:0">Evidence destroyed. 🫡</p><p class="soft" style="margin:0;line-height:1.5">The lab thanks you for your cooperation. That chapter is officially ash. Onward, on soft paws.</p></div>`;
+      return `<div class="tiny-title">🔥 Closing ritual · burn the evidence</div><p class="soft" style="margin:0;line-height:1.5">Type their name, or the message you never sent. Then burn it. Doctor's orders.</p><div style="position:relative"><input id="burnText" class="${state.burnState === "burning" ? "burning" : ""}" value="${escapeHtml(state.burnText)}" ${state.burnState === "burning" ? "disabled" : ""} placeholder="e.g. 'hope your wifi is as inconsistent as you'">${state.burnState === "burning" ? `<div class="flames">${[0,1,2,3,4,5,6].map((i) => `<span class="flame" style="animation-delay:${i * .18}s">🔥</span>`).join("")}</div>` : ""}</div><button class="btn warning" id="burn" ${!state.burnText.trim() || state.burnState === "burning" ? "disabled" : ""}>${state.burnState === "burning" ? "Burning... 🔥" : "Burn it 🔥"}</button>`;
+    }
+    function pick(opt) {
+      if (state.picked) return;
+      const q = QUESTIONS[state.idx];
+      const choice = q[opt];
+      state.picked = opt;
+      state.remark = (choice.pts >= 4 ? GOOD : BAD)[Math.floor(Math.random() * (choice.pts >= 4 ? GOOD.length : BAD.length))];
+      render();
+      setTimeout(() => {
+        state.answers.push({ cat: q.cat, pts: choice.pts });
+        state.picked = null;
+        state.remark = null;
+        if (state.idx + 1 < QUESTIONS.length) state.idx += 1;
+        else state.screen = "vent";
+        render();
+      }, 900);
+    }
+    function addEvidence(files) {
+      Array.from(files || []).filter((f) => /^image\/(png|jpe?g|webp|gif)$/.test(f.type)).slice(0, 3 - state.evidence.length).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          state.evidence.push({ preview: String(reader.result), media_type: file.type });
+          render();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    function submitVent() {
+      if (!state.vent.trim() && state.evidence.length === 0) { goToResults(); return; }
+      state.screen = "analyzing";
+      startMusic();
+      state.musicOn = true;
+      render();
+      setTimeout(() => {
+        state.ventResult = analyzeTestimony(state.vent.trim(), state.evidence);
+        state.screen = "results";
+        render();
+      }, 650);
+    }
+    function goToResults() {
+      startMusic();
+      state.musicOn = true;
+      state.screen = "results";
+      render();
+    }
+    function toggleMusic() {
+      const m = state.music;
+      if (state.musicOn) {
+        if (m.ctx) m.ctx.suspend();
+        state.musicOn = false;
+      } else {
+        if (!m.started) startMusic();
+        else if (m.ctx) m.ctx.resume();
+        state.musicOn = true;
+      }
+      render();
+    }
+    function burnIt() {
+      if (!state.burnText.trim() || state.burnState !== "idle") return;
+      state.burnState = "burning";
+      render();
+      setTimeout(() => { state.burnState = "done"; render(); }, 2600);
+    }
+    function restart() {
+      stopMusic();
+      Object.assign(state, { screen: "intro", name: "", idx: 0, answers: [], picked: null, remark: null, vent: "", ventResult: null, evidence: [], burnText: "", burnState: "idle", musicOn: true });
+      render();
+    }
+    function downloadCertificate(results, subject, deathDate) {
+      const W = 1080, H = 1350, cv = document.createElement("canvas");
+      cv.width = W; cv.height = H;
+      const c = cv.getContext("2d");
+      const bg = c.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, T.paper); bg.addColorStop(1, T.lilac);
+      c.fillStyle = bg; c.fillRect(0, 0, W, H);
+      const pad = 70, x = pad, y = pad, w = W - pad * 2, h = H - pad * 2, r = 40;
+      c.fillStyle = "#fff"; c.strokeStyle = T.ink; c.lineWidth = 6;
+      c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); c.fill(); c.stroke();
+      const cx = W / 2;
+      c.textAlign = "center"; c.fillStyle = T.inkSoft; c.font = "600 26px Space Grotesk, sans-serif"; c.fillText("DR. WHISKERS' HEARTBREAK FORENSICS LAB", cx, 165);
+      c.fillStyle = T.ink; c.font = "italic 700 64px Fraunces, Georgia, serif"; c.fillText("Certificate of", cx, 265); c.fillText("Situationship Death", cx, 340);
+      c.font = "500 40px Fraunces, Georgia, serif"; c.fillStyle = T.orchid; c.fillText(subject, cx, 425);
+      c.strokeStyle = results.pct < 45 ? T.red : T.pink; c.lineWidth = 5; c.lineCap = "round";
+      const ey = 510, amp = 10 + (results.pct / 100) * 55;
+      c.beginPath(); c.moveTo(180, ey); c.lineTo(420, ey); c.lineTo(465, ey - amp * .4); c.lineTo(505, ey + amp * .35); c.lineTo(545, ey); c.lineTo(585, ey - amp); c.lineTo(625, ey + amp * .8); c.lineTo(665, ey); c.lineTo(900, ey); c.stroke();
+      c.fillStyle = T.inkSoft; c.font = "600 26px Space Grotesk, sans-serif"; c.fillText("SURVIVAL PROBABILITY", cx, 610);
+      c.fillStyle = results.pct < 45 ? T.red : results.pct < 70 ? T.orchid : T.mint; c.font = "700 220px Fraunces, Georgia, serif"; c.fillText(`${results.pct}%`, cx, 830);
+      c.fillStyle = T.ink; c.font = "700 30px Space Grotesk, sans-serif"; c.fillText(`Time of death: ${deathDate}`, cx, 930);
+      c.font = "500 30px Space Grotesk, sans-serif"; wrapCanvas(c, `Cause of death: ${CAUSES[results.worst]}`, w - 160).forEach((line, i) => c.fillText(line, cx, 990 + i * 42));
+      c.fillStyle = T.inkSoft; c.font = "italic 500 34px Fraunces, Georgia, serif"; wrapCanvas(c, `"${results.verdict.title}"`, w - 160).forEach((line, i) => c.fillText(line, cx, 1095 + i * 46));
+      c.font = "500 26px Space Grotesk, sans-serif"; c.fillText("Certified by Dr. Whiskers, DVM (Doctor of Vibes & Meows)", cx, H - 130);
+      cv.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "situationship-death-certificate.png";
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      }, "image/png");
+    }
+    function wrapCanvas(c, text, maxWidth) {
+      const words = text.split(" "), lines = [];
+      let line = "";
+      words.forEach((word) => {
+        if (c.measureText(line + word).width > maxWidth && line) { lines.push(line.trim()); line = word + " "; }
+        else line += word + " ";
+      });
+      lines.push(line.trim());
+      return lines;
+    }
+    window.addEventListener("beforeunload", stopMusic);
+    render();
+  </script>
+</body>
+</html>
