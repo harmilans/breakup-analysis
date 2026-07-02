@@ -361,7 +361,7 @@
 
     const state = {
       screen: "intro", name: "", idx: 0, answers: [], picked: null, remark: null,
-      vent: "", ventResult: null, evidence: [], burnText: "", burnState: "idle",
+      vent: "", ventResult: null, burnText: "", burnState: "idle",
       musicOn: true, music: { started: false, stopped: false, ctx: null, master: null, timer: null }
     };
 
@@ -413,34 +413,8 @@
           : "I read your testimony carefully. Mixed evidence: some warmth, some warning signs. Which is exactly why your gut got confused. It wasn't you.";
       return { delta, note, findings: [] };
     }
-    async function analyzeTestimony(text, images) {
-      const response = await fetch("/api/analyze-testimony", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text,
-          images: images.slice(0, 3).map(({ data, media_type }) => ({ data, media_type }))
-        })
-      });
-
-      if (response.ok) {
-        const parsed = await response.json();
-        return normalizeAnalysis(parsed, text, images);
-      }
-
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || error.error || "Analysis API failed");
-    }
-
-    function normalizeAnalysis(parsed, text, images) {
-      const fallback = keywordAnalysis(text || "");
-      const delta = Math.max(-10, Math.min(10, Math.round(Number(parsed.delta ?? fallback.delta) || 0)));
-      const note = String(parsed.note || fallback.note).slice(0, 700);
-      const findings = Array.isArray(parsed.findings)
-        ? parsed.findings.slice(0, 4).map((finding) => String(finding).slice(0, 140))
-        : [];
-      if (images.length && !findings.length) findings.push("Screenshot evidence reviewed by the online vision endpoint.");
-      return { delta, note, findings };
+    async function analyzeTestimony(text) {
+      return keywordAnalysis(text || "");
     }
     function computeResults() {
       if (state.answers.length < QUESTIONS.length) return null;
@@ -500,20 +474,6 @@
 
     function render() {
       const app = document.getElementById("app");
-      if (location.protocol === "file:") {
-        app.innerHTML = `<section class="card stack" style="text-align:center">
-          ${catSvg("judging", 92)}
-          <div>
-            <h2 style="font:700 24px/1.2 Fraunces,serif;margin:0 0 10px">Open the Vercel link</h2>
-            <p class="soft" style="font-size:15px;line-height:1.55;margin:0">This app only works online because screenshot analysis needs the secure backend API. The local file preview is disabled.</p>
-          </div>
-          <div class="details">
-            <div><strong>Use:</strong> https://your-project.vercel.app</div>
-            <div><strong>Not:</strong> file:///C:/.../index.html</div>
-          </div>
-        </section>`;
-        return;
-      }
       const score = state.answers.reduce((s, a) => s + a.pts, 0);
       const health = state.answers.length ? score / (state.answers.length * 5) : 1;
       const catMood = health > .7 ? "happy" : health > .4 ? "neutral" : "judging";
@@ -556,19 +516,10 @@
         app.innerHTML = `<section class="card stack">
           ${speech("neutral", `<p><strong>One last thing before I sign the certificate.</strong> Vent to me. Everything: what went right, what went wrong, what you never got to say. I'll read every word, weigh it into the final probability, and add my doctor's note to the report.</p><p class="soft">Totally optional. Nothing leaves this room. Cat-patient confidentiality. 🤐</p>`)}
           <textarea id="vent" rows="6" placeholder="Let it out... the good, the bad, the 'wyd' texts at 1am...">${escapeHtml(state.vent)}</textarea>
-          <div class="evidence-box">
-            <div class="tiny-title">🔍 Optional: submit chat evidence</div>
-            <p class="soft" style="font-size:13px;line-height:1.45;margin:8px 0 0">Upload up to 3 screenshots of your chats. This standalone build previews them privately and keeps scoring local.</p>
-            <div class="thumbs">${state.evidence.map((ev, i) => `<div class="thumb"><img src="${ev.preview}" alt="evidence ${i + 1}"><button data-remove="${i}" aria-label="Remove screenshot">×</button></div>`).join("")}</div>
-            ${state.evidence.length < 3 ? `<label class="file-picker">📸 Add screenshot${state.evidence.length ? ` (${state.evidence.length}/3)` : "s"}<input id="evidence" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple></label>` : ""}
-          </div>
-          <button class="btn" id="submit">${state.vent.trim() || state.evidence.length ? "Submit testimony to the lab 📋" : "Skip straight to the report 🪦"}</button>
-          ${state.vent.trim() || state.evidence.length ? `<button class="btn secondary" id="skip">Actually, skip the vent</button>` : ""}
+          <button class="btn" id="submit">${state.vent.trim() ? "Submit testimony to the lab 📋" : "Skip straight to the report 🪦"}</button>
+          ${state.vent.trim() ? `<button class="btn secondary" id="skip">Actually, skip the vent</button>` : ""}
         </section>`;
         document.getElementById("vent").addEventListener("input", (e) => state.vent = e.target.value);
-        document.querySelectorAll("[data-remove]").forEach((b) => b.onclick = () => { state.evidence.splice(Number(b.dataset.remove), 1); render(); });
-        const file = document.getElementById("evidence");
-        if (file) file.onchange = (e) => addEvidence(e.target.files);
         document.getElementById("submit").onclick = submitVent;
         const skip = document.getElementById("skip");
         if (skip) skip.onclick = goToResults;
@@ -578,8 +529,8 @@
       if (state.screen === "analyzing") {
         app.innerHTML = `<section class="card stack" style="align-items:center;text-align:center;padding:32px">
           ${catSvg("judging", 100)}
-          <p class="thinking" style="font:600 19px Fraunces,serif;margin:0">${state.evidence.length ? "Dr. Whiskers is examining the evidence..." : "Dr. Whiskers is reading your testimony..."}</p>
-          <p class="soft" style="margin:0;font-size:13.5px">${state.evidence.length ? "Dusting the screenshots for red flags. 🔍🐾" : "Adjusting the probability. Sharpening the claws. 🐾"}</p>
+          <p class="thinking" style="font:600 19px Fraunces,serif;margin:0">Dr. Whiskers is reading your testimony...</p>
+          <p class="soft" style="margin:0;font-size:13.5px">Adjusting the probability. Sharpening the claws. 🐾</p>
         </section>`;
         return;
       }
@@ -596,7 +547,6 @@
             <div class="details"><div><strong>Time of death:</strong> ${deathDate}</div><div><strong>Cause of death:</strong> ${escapeHtml(CAUSES[results.worst])}</div><div><strong>Certified by:</strong> Dr. Whiskers, DVM (Doctor of Vibes & Meows) 🐾</div></div>
             <button class="btn yellow" id="download">📸 Save certificate for the group chat</button>
           </div>
-          ${state.ventResult && state.ventResult.findings.length ? `<div class="card stack"><div class="tiny-title">🔍 Texting forensics · from your evidence</div>${state.ventResult.findings.map((f, i) => `<div class="details" style="background:var(--paper)"><em>${["🚩", "🔎", "📉"][i] || "🔎"} ${escapeHtml(f)}</em></div>`).join("")}</div>` : ""}
           ${state.ventResult ? `<div class="card">${speech("neutral", `<p style="font-style:italic">${escapeHtml(state.ventResult.note)}</p>`, true)}</div>` : ""}
           <div class="card stack">
             ${speech(results.pct < 45 ? "grave" : results.pct < 70 ? "judging" : "happy", `<h2 style="font:700 19px/1.3 Fraunces,serif;margin:0">${escapeHtml(results.verdict.title)}</h2><p style="margin-top:8px">${escapeHtml(results.verdict.savage)}</p>`)}
@@ -637,34 +587,14 @@
         render();
       }, 900);
     }
-    function addEvidence(files) {
-      Array.from(files || []).filter((f) => /^image\/(png|jpe?g|webp|gif)$/.test(f.type)).slice(0, 3 - state.evidence.length).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = String(reader.result);
-          state.evidence.push({ preview: dataUrl, data: dataUrl.split(",")[1], media_type: file.type === "image/jpg" ? "image/jpeg" : file.type });
-          render();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
     function submitVent() {
-      if (!state.vent.trim() && state.evidence.length === 0) { goToResults(); return; }
+      if (!state.vent.trim()) { goToResults(); return; }
       state.screen = "analyzing";
       startMusic();
       state.musicOn = true;
       render();
       setTimeout(async () => {
-        try {
-          state.ventResult = await analyzeTestimony(state.vent.trim(), state.evidence);
-        } catch (error) {
-          const detail = error instanceof Error && error.message ? error.message : "Unknown backend error";
-          state.ventResult = {
-            delta: 0,
-            note: `The online analysis backend responded, but analysis failed: ${detail}. Check Vercel Function logs for the same error, then try again.`,
-            findings: [`Backend error: ${detail}`]
-          };
-        }
+        state.ventResult = await analyzeTestimony(state.vent.trim());
         state.screen = "results";
         render();
       }, 650);
@@ -695,7 +625,7 @@
     }
     function restart() {
       stopMusic();
-      Object.assign(state, { screen: "intro", name: "", idx: 0, answers: [], picked: null, remark: null, vent: "", ventResult: null, evidence: [], burnText: "", burnState: "idle", musicOn: true });
+      Object.assign(state, { screen: "intro", name: "", idx: 0, answers: [], picked: null, remark: null, vent: "", ventResult: null, burnText: "", burnState: "idle", musicOn: true });
       render();
     }
     function downloadCertificate(results, subject, deathDate) {
