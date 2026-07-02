@@ -413,13 +413,43 @@
           : "I read your testimony carefully. Mixed evidence: some warmth, some warning signs. Which is exactly why your gut got confused. It wasn't you.";
       return { delta, note, findings: [] };
     }
-    function analyzeTestimony(text, images) {
+    async function analyzeTestimony(text, images) {
+      if (location.protocol !== "file:") {
+        try {
+          const response = await fetch("/api/analyze-testimony", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text,
+              images: images.slice(0, 3).map(({ data, media_type }) => ({ data, media_type }))
+            })
+          });
+          if (response.ok) {
+            const parsed = await response.json();
+            return normalizeAnalysis(parsed, text, images);
+          }
+        } catch (_) {
+          // Fall through to the local text-only analysis for offline/static previews.
+        }
+      }
+
       const result = keywordAnalysis(text || "");
       if (images.length) {
-        result.note += " I could preview the screenshot evidence locally, but without a private analysis API connected, I only used your written testimony for scoring.";
-        result.findings = ["Screenshot evidence was attached for the report.", "Private browser build avoided uploading chat images.", "Written testimony carried the final adjustment."];
+        result.note += " Screenshot analysis will run when this is deployed with the secure /api/analyze-testimony endpoint.";
+        result.findings = ["Screenshot evidence attached.", "Online vision endpoint not available in this local file preview.", "Written testimony carried this fallback score."];
       }
       return result;
+    }
+
+    function normalizeAnalysis(parsed, text, images) {
+      const fallback = keywordAnalysis(text || "");
+      const delta = Math.max(-10, Math.min(10, Math.round(Number(parsed.delta ?? fallback.delta) || 0)));
+      const note = String(parsed.note || fallback.note).slice(0, 700);
+      const findings = Array.isArray(parsed.findings)
+        ? parsed.findings.slice(0, 4).map((finding) => String(finding).slice(0, 140))
+        : [];
+      if (images.length && !findings.length) findings.push("Screenshot evidence reviewed by the online vision endpoint.");
+      return { delta, note, findings };
     }
     function computeResults() {
       if (state.answers.length < QUESTIONS.length) return null;
@@ -606,7 +636,8 @@
       Array.from(files || []).filter((f) => /^image\/(png|jpe?g|webp|gif)$/.test(f.type)).slice(0, 3 - state.evidence.length).forEach((file) => {
         const reader = new FileReader();
         reader.onload = () => {
-          state.evidence.push({ preview: String(reader.result), media_type: file.type });
+          const dataUrl = String(reader.result);
+          state.evidence.push({ preview: dataUrl, data: dataUrl.split(",")[1], media_type: file.type === "image/jpg" ? "image/jpeg" : file.type });
           render();
         };
         reader.readAsDataURL(file);
@@ -618,8 +649,8 @@
       startMusic();
       state.musicOn = true;
       render();
-      setTimeout(() => {
-        state.ventResult = analyzeTestimony(state.vent.trim(), state.evidence);
+      setTimeout(async () => {
+        state.ventResult = await analyzeTestimony(state.vent.trim(), state.evidence);
         state.screen = "results";
         render();
       }, 650);
